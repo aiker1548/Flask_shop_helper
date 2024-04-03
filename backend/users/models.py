@@ -31,12 +31,15 @@ class User(db.Model):
         }
 
 
-# class Subscriber(db.Model):
-#     __tablename__ = 'subscribers'
+class Subscriber(db.Model):
+    __tablename__ = 'subscribers'
 
-#     id = db.Column(db.Integer, primary_key=True)
-#     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-#     user = db.relationship('User', backref=db.backref('subscribers', lazy=True))
+    id = db.Column(db.Integer, primary_key=True)
+    subscriber_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    subscribed_to_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-#     def __repr__(self):
-#         return '<Subscriber %r>' % self.email
+    subscriber = db.relationship('User', foreign_keys=[subscriber_id], backref='subscriptions')
+    subscribed_to = db.relationship('User', foreign_keys=[subscribed_to_id], backref='subscribers')
+
+    def __repr__(self):
+        return f'<Subscriber {self.subscriber_id} subscribed to {self.subscribed_to_id}>'
