@@ -18,6 +18,17 @@ class User(db.Model):
 
     def __repr__(self):
         return f"User('{self.username}', '{self.email}'')"
+    
+    def serialize(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'email': self.email,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'password': self.password
+            # добавьте другие поля пользователя по необходимости
+        }
 
 
 # class Subscriber(db.Model):

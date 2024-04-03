@@ -9,14 +9,13 @@ api = Blueprint('api', __name__)
 @api.route('/users', methods=['GET'])
 def get_users():
     users = User.query.all()
-    print('ok')
     return jsonify([user.serialize() for user in users]), 200
 
 @api.route('/users', methods=['POST'])
 def create_user():
     data = request.json
-    hashed_password = generate_password_hash(data['password'], method='sha256')
-    new_user = User(username=data['username'], email=data['email'], password=hashed_password)
+    hashed_password = generate_password_hash(data['password'])
+    new_user = User(username=data['username'], email=data['email'], password=hashed_password, last_name=data['last_name'], first_name=data['first_name'])
     db.session.add(new_user)
     db.session.commit()
     return jsonify({'message': 'User created successfully'}), 201
