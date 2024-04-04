@@ -27,7 +27,6 @@ class User(db.Model):
             'first_name': self.first_name,
             'last_name': self.last_name,
             'password': self.password
-            # добавьте другие поля пользователя по необходимости
         }
 
 
@@ -43,3 +42,9 @@ class Subscriber(db.Model):
 
     def __repr__(self):
         return f'<Subscriber {self.subscriber_id} subscribed to {self.subscribed_to_id}>'
+    
+    def serialize(self):
+        return {
+            'subscriber': self.subscriber,
+            'subscribed_to': self.subscribed_to
+        }
