@@ -1,5 +1,5 @@
-from flask import Blueprint, jsonify, request
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask import Blueprint, jsonify, request, url_for
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, unset_jwt_cookies
 from werkzeug.security import generate_password_hash, check_password_hash
 from .models import db, User, Subscriber
 from flask_restful import Resource
@@ -8,16 +8,52 @@ api = Blueprint('api', __name__, url_prefix='/api')
 
 class Users(Resource):
     def get(self):
-        users = User.query.all()
-        return jsonify([user.serialize() for user in users]), 200
+        # Получаем параметры page и limit из запроса
+        page = request.args.get('page', default=1, type=int)
+        limit = request.args.get('limit', default=10, type=int)
+
+        # Вычисляем смещение для запроса
+        offset = (page - 1) * limit
+
+        # Получаем список пользователей для текущей страницы
+        users = User.query.offset(offset).limit(limit).all()
+
+        # Формируем список результатов для текущей страницы
+        results = [user.serialize() for user in users]
+
+        # Получаем общее количество объектов в базе
+        total_users_count = User.query.count()
+
+        # Вычисляем ссылку на следующую страницу, если она есть
+        next_page = None
+        if offset + limit < total_users_count:
+            next_page = url_for('api.users', page=page+1, limit=limit, _external=True)
+
+        # Вычисляем ссылку на предыдущую страницу, если она есть
+        previous_page = None
+        if page > 1:
+            previous_page = url_for('api.users', page=page-1, limit=limit, _external=True)
+
+        # Формируем ответ в соответствии с заданным форматом
+        response = {
+            'count': total_users_count,
+            'next': next_page,
+            'previous': previous_page,
+            'results': results
+        }
+
+        return jsonify(response), 200
 
     def post(self):
-        data = request.json
-        hashed_password = generate_password_hash(data['password'])
-        new_user = User(username=data['username'], email=data['email'], password=hashed_password, last_name=data['last_name'], first_name=data['first_name'])
-        db.session.add(new_user)
-        db.session.commit()
-        return jsonify({'message': 'User created successfully'}), 201
+        try:
+            data = request.json
+            hashed_password = generate_password_hash(data['password'])
+            new_user = User(username=data['username'], email=data['email'], password=hashed_password, last_name=data['last_name'], first_name=data['first_name'])
+            db.session.add(new_user)
+            db.session.commit()
+            return jsonify({'message': 'User created successfully'}), 201
+        except:
+            return jsonify({'message': 'Validate error'}), 400
 
 class UserProfile(Resource):
     def get(self, user_id):
@@ -26,6 +62,17 @@ class UserProfile(Resource):
             return jsonify(user.serialize()), 200
         else:
             return jsonify({'message': 'User not found'}), 404
+
+@api.route('/users/me', methods=['GET'])
+@jwt_required()
+def my_profile():
+    current_user_id = get_jwt_identity()
+    try:
+        user = User.query.get(current_user_id)
+        return jsonify(user.serialize()), 200
+    except:
+        return jsonify({'message': 'User is not authorized'}), 401
+
 
 class UserSubscriptions(Resource):
     @jwt_required()
@@ -57,7 +104,7 @@ class Subscribe(Resource):
         db.session.commit()
 
         return jsonify({'message': 'Subscription created successfully'}), 201
-    
+
 
 @api.route('/login', methods=['POST'])
 def login():
@@ -68,6 +115,17 @@ def login():
     access_token = create_access_token(identity=user.id)
     return jsonify(access_token=access_token), 200
 
+@api.route('/logout', methods=['POST'])
+@jwt_required()
+def logout():
+    # Получаем идентификатор текущего пользователя из токена
+    current_user_id = get_jwt_identity()
+
+    # Очищаем куки с JWT токеном
+    response = jsonify({'message': 'Logout successful'})
+    unset_jwt_cookies(response)
+
+    return response, 200
 
 @api.route('/auth', methods=['GET'])
 @jwt_required()
@@ -76,15 +134,6 @@ def authenticate():
     user = User.query.get(current_user_id)
     return jsonify(user.serialize()), 200
 
-@api.route('/users/me', methods=['GET'])
-@jwt_required()
-def my_profile():
-    current_user_id = get_jwt_identity()
-    try:
-        user = User.query.get(current_user_id)
-        return jsonify(user.serialize()), 200
-    except:
-        return jsonify({'message': 'User is not authorized'}), 401
 
 
 
