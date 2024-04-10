@@ -52,8 +52,8 @@ class Users(Resource):
             db.session.add(new_user)
             db.session.commit()
             return jsonify(new_user.serialize()), 201
-        except:
-            return jsonify({'message': 'Validate error'}), 400
+        except Exception as e:
+            return jsonify({'message': f'{e}'}), 400
 
 class UserProfile(Resource):
     def get(self, user_id):

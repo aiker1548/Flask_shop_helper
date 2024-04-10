@@ -30,8 +30,11 @@ def create_app(config=None):
     # Инициализируем расширения приложения
     db.init_app(app)
     # Регистрируем блюпринты (подприложения) вашего приложения
-    from backend.users.apiViews import api
-    app.register_blueprint(api)
+    from backend.users.apiViews import api as api_user
+    from backend.recipes.views import api as api_recipes
+    app.register_blueprint(api_user)
+    app.register_blueprint(api_recipes)
+    
 
     with app.app_context():
         db.create_all()

@@ -1,9 +1,9 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Blueprint
 from flask_restful import Api, Resource, fields, marshal_with
 from .models import db, Ingredient, Tag, Recipe, IngredientsInRecipe, TagsInRecipe
 
 app = Flask(__name__)
-api = Api(app)
+api = Blueprint('api_recipe', __name__, url_prefix='/api')
 
 ingredient_fields = {
     'id': fields.Integer,
@@ -80,21 +80,6 @@ class TagResource(Resource):
         db.session.commit()
         return new_tag, 201
 
-    @marshal_with(tag_fields)
-    def put(self, tag_id):
-        data = request.json
-        tag = Tag.query.get_or_404(tag_id)
-        tag.name = data['name']
-        tag.color = data['color']
-        tag.slug = data['slug']
-        db.session.commit()
-        return tag, 200
-
-    def delete(self, tag_id):
-        tag = Tag.query.get_or_404(tag_id)
-        db.session.delete(tag)
-        db.session.commit()
-        return {'message': 'Tag deleted successfully'}, 200
 
 
 class RecipeResource(Resource):
@@ -166,6 +151,11 @@ class RecipeResource(Resource):
         return {'message': 'Recipe deleted successfully'},
 
 # Добавление ресурсов в API
-api.add_resource(IngredientResource, '/ingredients', '/ingredients/<int:ingredient_id>')
-api.add_resource(TagResource, '/tags', '/tags/<int:tag_id>')
-api.add_resource(RecipeResource, '/recipes', '/recipes/<int:recipe_id>')
+api.add_url_rule('/ingredients/<int:ingredient_id>/', view_func=IngredientResource.as_view('ingredient'), methods=['PUT', 'DELETE'])
+api.add_url_rule('/ingredients/', view_func=IngredientResource.as_view('ingredients'), methods=['GET', 'POST'])
+
+api.add_url_rule('/tags/<int:tag_id>/', view_func=TagResource.as_view('tag'), methods=['PUT', 'DELETE', 'GET'])
+api.add_url_rule('/tags/', view_func=TagResource.as_view('tags'), methods=['GET', 'POST'])
+
+api.add_url_rule('/recipes/<int:recipe_id>/', view_func=RecipeResource.as_view('recipe'), methods=['PUT', 'DELETE'])
+api.add_url_rule('/recipes/', view_func=RecipeResource.as_view('recipes'), methods=["GET", "POST"])
