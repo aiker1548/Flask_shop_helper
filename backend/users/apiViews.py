@@ -51,7 +51,7 @@ class Users(Resource):
             new_user = User(username=data['username'], email=data['email'], password=hashed_password, last_name=data['last_name'], first_name=data['first_name'])
             db.session.add(new_user)
             db.session.commit()
-            return jsonify({'message': 'User created successfully'}), 201
+            return jsonify(new_user.serialize()), 201
         except:
             return jsonify({'message': 'Validate error'}), 400
 
@@ -106,16 +106,21 @@ class Subscribe(Resource):
         return jsonify({'message': 'Subscription created successfully'}), 201
 
 
-@api.route('/login', methods=['POST'])
+@api.route('/auth/token/login/', methods=['POST'])
 def login():
     data = request.json
-    user = User.query.filter_by(username=data['username']).first()
-    if not user or not check_password_hash(user.password, data['password']):
-        return jsonify({'message': 'Invalid username or password'}), 401
+    if 'username' in data:
+        user = User.query.filter_by(username=data['username']).first()
+    elif  'email' in data:
+        user = User.query.filter_by(email=data['email']).first()
+    else:
+        user = None
+    if user is None or not check_password_hash(user.password, data['password']):
+        return jsonify({'message': 'Invalid username or password'}), 400
     access_token = create_access_token(identity=user.id)
-    return jsonify(access_token=access_token), 200
+    return jsonify({"auth_token": access_token}), 200
 
-@api.route('/logout', methods=['POST'])
+@api.route('/auth/token/logout', methods=['POST'])
 @jwt_required()
 def logout():
     # Получаем идентификатор текущего пользователя из токена
@@ -137,8 +142,8 @@ def authenticate():
 
 
 
-api.add_url_rule('/users', view_func=Users.as_view('users'))
-api.add_url_rule('/users/<int:user_id>', view_func=UserProfile.as_view('user_profile'))
-api.add_url_rule('/users/subscriptions', view_func=UserSubscriptions.as_view('subscriptions'))
+api.add_url_rule('/users/', view_func=Users.as_view('users'))
+api.add_url_rule('/users/<int:user_id>/', view_func=UserProfile.as_view('user_profile'))
+api.add_url_rule('/users/subscriptions/', view_func=UserSubscriptions.as_view('subscriptions'))
 # Добавление поддержки подписки на пользователя
-api.add_url_rule('/users/<int:user_id>/subscribe', view_func=Subscribe.as_view('subscribe_user'))
+api.add_url_rule('/users/<int:user_id>/subscribe/', view_func=Subscribe.as_view('subscribe_user'))
